@@ -11,4 +11,8 @@ pub fn on_connect(socket: SocketRef, Data(data): Data<Value>) {
 
     socket.on("message", on_message);
     socket.on("message-with-ack", on_message_with_ack);
+
+    socket.on("sendChatMessage", |a: Data<Value>| {
+        info!("{:?}", a.to_string());
+    })
 }

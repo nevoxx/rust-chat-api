@@ -278,3 +278,10 @@ pub async fn get_users_handler(
 
     return Ok((StatusCode::OK, Json(json!(user_resources))));
 }
+
+
+pub async fn get_link_preview_handler(
+    State(data): State<Arc<AppState>>
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    return Ok(());
+}

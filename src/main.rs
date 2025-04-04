@@ -19,7 +19,7 @@ use tracing_subscriber::FmtSubscriber;
 use tower_http::cors::{CorsLayer, Any};
 use crate::auth::auth;
 use crate::config::Config;
-use crate::handlers::{get_auth_me_handler, get_channel_messages_handler, get_channels_handler, get_server_info, get_users_handler, hello_handler, post_auth_token_handler, post_register_user_handler};
+use crate::handlers::{get_auth_me_handler, get_channel_messages_handler, get_channels_handler, get_link_preview_handler, get_server_info, get_users_handler, hello_handler, post_auth_token_handler, post_register_user_handler};
 use crate::socket::connection::on_connect;
 
 
@@ -89,6 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/channels/{channel_id}/messages/", get(get_channel_messages_handler))
                 .route("/users", get(get_users_handler))
                 .route("/auth/me", get(get_auth_me_handler))
+                .route("/fetch-preview-data/", get(get_link_preview_handler))
                 .layer(middleware::from_fn_with_state(app_state.clone(), auth))
         )
         .with_state(app_state)
