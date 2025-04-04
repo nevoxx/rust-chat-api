@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS `user_permissions`;
+DROP TABLE IF EXISTS `role_permissions`;
+DROP TABLE IF EXISTS `user_roles`;
+DROP TABLE IF EXISTS `attachments`;
+DROP TABLE IF EXISTS `messages`;
+DROP TABLE IF EXISTS `channels`;
+DROP TABLE IF EXISTS `servers`;
+DROP TABLE IF EXISTS `invite_codes`;
+DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `permissions`;
+DROP TABLE IF EXISTS `roles`;
