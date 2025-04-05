@@ -33,13 +33,13 @@ pub async fn on_connect(socket: SocketRef, Data(data): Data<Value>, app_state: A
     socket.emit("auth", &data).ok();
 
     // Authenticate and establish connection
-    if let Err(e) = authenticate_socket(&socket, &token, app_state).await {
+    if let Err(e) = authenticate_socket(&socket, &token, app_state.clone()).await {
         warn!("Authentication failed: {}", e);
         return;
     }
 
     // Register event handlers
-    register_event_handlers(&socket);
+    register_event_handlers(&socket, app_state.clone());
 }
 
 async fn authenticate_socket(socket: &SocketRef, token: &str, app_state: Arc<AppState>) -> Result<(), String> {
@@ -64,8 +64,16 @@ async fn authenticate_socket(socket: &SocketRef, token: &str, app_state: Arc<App
     Ok(())
 }
 
-fn register_event_handlers(socket: &SocketRef) {
-    socket.on("sendChatMessage", |socket: SocketRef, Data(msg): Data<Value>| {
+fn register_event_handlers(socket: &SocketRef, app_state: Arc<AppState>) {
+    let app_state_clone = app_state.clone();
+    socket.on("sendChatMessage", move |socket: SocketRef, Data(msg): Data<Value>| {
+        info!("~~ Cnt ~~ : {:?}", app_state_clone.cnt);
+
+        {
+            let mut cnt = app_state_clone.cnt.lock().unwrap();
+            *cnt += 1;
+        }
+
         if let Some(connection_info) = socket.extensions.get::<ConnectionInfo>() {
             info!("Message from user {}: {:?}", connection_info.user.id, msg);
         } else {

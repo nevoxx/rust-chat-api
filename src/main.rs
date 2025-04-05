@@ -8,7 +8,7 @@ mod requests;
 mod auth;
 mod services;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use axum::{routing::get, routing::post, Router, middleware};
 use dotenv::dotenv;
 use serde_json::Value;
@@ -28,6 +28,7 @@ use crate::socket::connection::on_connect;
 pub struct AppState {
     db: MySqlPool,
     config: Config,
+    cnt: Mutex<i32>,
 }
 
 
@@ -69,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ]);
 
     // App State
-    let app_state = Arc::new(AppState { db: pool.clone(), config: config.clone() });
+    let app_state = Arc::new(AppState { db: pool.clone(), config: config.clone(), cnt: Mutex::from(0) });
 
     // Socket.io Server
     let (socket_layer, io) = SocketIo::builder()
