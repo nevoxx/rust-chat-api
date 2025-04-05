@@ -23,6 +23,21 @@ pub struct ErrorResponse {
     pub message: String,
 }
 
+pub fn parse_token(token: &str, jwt_secret: &str) -> Result<TokenClaims, String> {
+    decode::<TokenClaims>(
+        &token,
+        &DecodingKey::from_secret(jwt_secret.as_ref()),
+        &Validation::default(),
+    )
+        .map(|token| token.claims)
+        .map_err(|e| format!("Invalid token: {}", e))
+}
+
+pub fn extract_user_id(token_claims: &TokenClaims) -> Result<uuid::Uuid, String> {
+    uuid::Uuid::parse_str(&token_claims.sub)
+        .map_err(|e| format!("Invalid User ID in token: {}", e))
+}
+
 pub async fn auth(
     State(data): State<Arc<AppState>>,
     mut request: Request<Body>,

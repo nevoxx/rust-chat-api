@@ -41,6 +41,21 @@ pub async fn get_channel_messages(data: Arc<AppState>, channel_id: String) -> Re
         .await
 }
 
+pub async fn get_user_by_id(data: Arc<AppState>, user_id: String) -> Result<User> {
+    sqlx::query_as!(
+        User,
+        r#"
+        SELECT
+            *
+        FROM users
+        WHERE id = ?
+        "#,
+        user_id
+    )
+        .fetch_one(&data.db)
+        .await
+}
+
 
 pub async fn get_users(
     data: Arc<AppState>,

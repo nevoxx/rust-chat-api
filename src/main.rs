@@ -11,6 +11,8 @@ mod services;
 use std::sync::Arc;
 use axum::{routing::get, routing::post, Router, middleware};
 use dotenv::dotenv;
+use serde_json::Value;
+use socketioxide::extract::{Data, SocketRef};
 use socketioxide::SocketIo;
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySqlPool;
@@ -66,16 +68,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             axum::http::header::CONTENT_TYPE
         ]);
 
+    // App State
+    let app_state = Arc::new(AppState { db: pool.clone(), config: config.clone() });
+
     // Socket.io Server
     let (socket_layer, io) = SocketIo::builder()
         .req_path("/server/")
         .build_layer();
 
-    // Attach connect listener
-    io.ns("/", on_connect);
-
-    // App State
-    let app_state = Arc::new(AppState { db: pool.clone(), config: config.clone() });
+    // Create a closure that captures the app state
+    let state_clone = app_state.clone();
+    io.ns("/", move |socket: SocketRef, Data(data): Data<Value>| {
+        on_connect(socket, Data(data), state_clone)
+    });
 
     // Create Axum app
     let app = Router::new()
