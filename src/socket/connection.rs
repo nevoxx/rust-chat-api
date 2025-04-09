@@ -8,6 +8,7 @@ use crate::AppState;
 use crate::auth::{extract_user_id, parse_token};
 use crate::models::User;
 use crate::queries::get_user_by_id;
+use crate::socket::handlers::send_chat_message;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ConnectionInfo {
@@ -35,6 +36,7 @@ pub async fn on_connect(socket: SocketRef, Data(data): Data<Value>, app_state: A
     // Authenticate and establish connection
     if let Err(e) = authenticate_socket(&socket, &token, app_state.clone()).await {
         warn!("Authentication failed: {}", e);
+        let _ = socket.disconnect();
         return;
     }
 
@@ -67,17 +69,6 @@ async fn authenticate_socket(socket: &SocketRef, token: &str, app_state: Arc<App
 fn register_event_handlers(socket: &SocketRef, app_state: Arc<AppState>) {
     let app_state_clone = app_state.clone();
     socket.on("sendChatMessage", move |socket: SocketRef, Data(msg): Data<Value>| {
-        info!("~~ Cnt ~~ : {:?}", app_state_clone.cnt);
-
-        {
-            let mut cnt = app_state_clone.cnt.lock().unwrap();
-            *cnt += 1;
-        }
-
-        if let Some(connection_info) = socket.extensions.get::<ConnectionInfo>() {
-            info!("Message from user {}: {:?}", connection_info.user.id, msg);
-        } else {
-            warn!("Received message but no connection info found");
-        }
+        send_chat_message(&socket, Data(msg), app_state_clone);
     });
 }
