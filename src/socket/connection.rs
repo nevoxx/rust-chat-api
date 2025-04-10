@@ -68,7 +68,7 @@ async fn authenticate_socket(socket: &SocketRef, token: &str, app_state: Arc<App
 
 fn register_event_handlers(socket: &SocketRef, app_state: Arc<AppState>) {
     let app_state_clone = app_state.clone();
-    socket.on("sendChatMessage", move |socket: SocketRef, Data(msg): Data<Value>| {
-        send_chat_message(&socket, Data(msg), app_state_clone);
+    socket.on("sendChatMessage", |socket: SocketRef, Data(msg): Data<Value>| async move {
+        send_chat_message(&socket, Data(msg), app_state_clone).await;
     });
 }

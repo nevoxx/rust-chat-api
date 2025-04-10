@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use sqlx::Result;
+use uuid::Uuid;
 use crate::AppState;
 use crate::models::{Channel, Message, User};
 
@@ -108,3 +109,43 @@ pub async fn get_users(
 //         .fetch_one(&data.db)
 //         .await
 // }
+
+pub async fn create_message(
+    data: Arc<AppState>,
+    user_id: String,
+    channel_id: String,
+    content: Option<String>
+) -> Result<Message> {
+    let id = Uuid::new_v4().to_string();
+    let now = chrono::Utc::now();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO messages (id, user_id, channel_id, content, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        "#,
+        id,
+        user_id,
+        channel_id,
+        content,
+        now,
+        now,
+    )
+        .execute(&data.db)
+        .await?;
+
+    let message = sqlx::query_as!(
+        Message,
+        r#"
+        SELECT
+            *
+        FROM messages
+        WHERE id = ?
+        "#,
+        id
+    )
+        .fetch_one(&data.db)
+        .await?;
+
+    Ok(message)
+}
