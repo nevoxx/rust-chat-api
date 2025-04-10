@@ -1,10 +1,12 @@
 use std::sync::Arc;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use socketioxide::extract::{SocketRef, Data};
+use socketioxide::SocketIo;
 use tracing::{info, warn};
 use crate::AppState;
 use crate::queries::create_message;
+use crate::responses::MessageResource;
 use crate::socket::connection::ConnectionInfo;
 
 #[derive(Debug, Deserialize)]
@@ -18,6 +20,11 @@ struct SendMessagePayload {
     attachment_ids: Vec<String>, // optional, but include it if it's in the payload
 }
 
+#[derive(Debug, Serialize)]
+pub struct ReceiveChatMessagePayload {
+    message: MessageResource,
+}
+
 // info!("~~ Cnt ~~ : {:?}", app_state.cnt);
 //
 // {
@@ -26,37 +33,44 @@ struct SendMessagePayload {
 // }
 //
 
-pub async fn send_chat_message(socket: &SocketRef, Data(msg): Data<Value>, app_state: Arc<AppState>) {
-    if let Some(connection_info) = socket.extensions.get::<ConnectionInfo>() {
-        let user_id = connection_info.user.id.clone();
-        let payload_result: Result<SendMessagePayload, _> = serde_json::from_value(msg);
-
-        match payload_result {
-            Ok(payload) => {
-                info!("Creating message from user {}: {:?}", user_id, payload);
-
-                // Create the message using your DB logic
-                match create_message(
-                    app_state,
-                    user_id.clone(),
-                    payload.channel_id,
-                    payload.content,
-                ).await {
-                    Ok(message) => {
-                        info!("Message saved: {:?}", message);
-
-                        // todo: send response
-                    }
-                    Err(e) => {
-                        warn!("Failed to create message: {}", e);
-                    }
-                }
-            }
-            Err(e) => {
-                warn!("Failed to deserialize message payload: {}", e);
-            }
+pub async fn send_chat_message(io: &SocketIo, socket: &SocketRef, Data(msg): Data<Value>, app_state: Arc<AppState>) {
+    let connection_info = match socket.extensions.get::<ConnectionInfo>() {
+        Some(info) => info,
+        None => {
+            warn!("Received message but no connection info found");
+            return;
         }
-    } else {
-        warn!("Received message but no connection info found");
+    };
+
+    let user_id = connection_info.user.id.clone();
+    let payload: SendMessagePayload = match serde_json::from_value(msg) {
+        Ok(payload) => payload,
+        Err(e) => {
+            warn!("Failed to deserialize message payload: {}", e);
+            return;
+        }
+    };
+
+    info!("Creating message from user {}: {:?}", user_id, payload);
+
+    let message = match create_message(
+        app_state,
+        user_id,
+        payload.channel_id,
+        payload.content,
+    ).await {
+        Ok(message) => message,
+        Err(e) => {
+            warn!("Failed to create message: {}", e);
+            return;
+        }
+    };
+
+    info!("Message saved: {:?}", message);
+
+    if let Err(e) = io.emit("receiveChatMessage", &ReceiveChatMessagePayload {
+        message: message.to_resource(connection_info.user.to_resource())
+    }).await {
+        warn!("Failed to emit message: {}", e);
     }
 }
