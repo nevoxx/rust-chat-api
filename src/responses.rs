@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[allow(non_snake_case)]
 pub struct AttachmentResource {
     pub id: String,
-    pub type_: Option<String>,  // Note: Using type_ as type is a reserved keyword
+    pub type_: Option<String>, // Note: Using type_ as type is a reserved keyword
     pub modelId: Option<String>,
     pub modelType: Option<String>,
     pub mimeType: Option<String>,
@@ -12,7 +12,6 @@ pub struct AttachmentResource {
     pub createdAt: chrono::DateTime<chrono::Utc>,
     pub updatedAt: chrono::DateTime<chrono::Utc>,
 }
-
 
 #[derive(Debug, Deserialize, Serialize)]
 #[allow(non_snake_case)]
@@ -38,7 +37,7 @@ pub struct MessageResource {
     pub deletedAt: Option<chrono::DateTime<chrono::Utc>>,
     pub deletedByUserId: Option<String>,
     pub user: UserResource,
-    pub attachments: Vec<AttachmentResource>
+    pub attachments: Vec<AttachmentResource>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -67,7 +66,6 @@ pub struct UserResource {
     pub updatedAt: chrono::DateTime<chrono::Utc>,
 }
 
-
 #[derive(Debug, Deserialize, Serialize)]
 #[allow(non_snake_case)]
 pub struct ConnectionStateResource {
@@ -75,9 +73,8 @@ pub struct ConnectionStateResource {
     pub connectedAt: Option<chrono::DateTime<chrono::Utc>>,
     pub currentChannelId: Option<String>,
     pub isAudioMuted: Option<bool>,
-    pub isMicrophoneMuted: Option<bool>
+    pub isMicrophoneMuted: Option<bool>,
 }
-
 
 #[derive(Debug, Deserialize, Serialize)]
 #[allow(non_snake_case)]
@@ -85,7 +82,6 @@ pub struct UserListResource {
     pub user: UserResource,
     pub connectionState: ConnectionStateResource,
 }
-
 
 #[derive(Debug, Deserialize, Serialize)]
 #[allow(non_snake_case)]
@@ -100,6 +96,5 @@ pub struct AuthMeUserResource {
     pub connectedAt: Option<chrono::DateTime<chrono::Utc>>,
     pub createdAt: chrono::DateTime<chrono::Utc>,
     pub updatedAt: chrono::DateTime<chrono::Utc>,
-    pub permissions : Vec<String>,
+    pub permissions: Vec<String>,
 }
-

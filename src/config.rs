@@ -18,6 +18,6 @@ impl Config {
             jwt_secret,
             // jwt_expires_in,
             // jwt_max_age: jwt_max_age.parse::<i32>().unwrap(),
-        }
+        };
     }
 }

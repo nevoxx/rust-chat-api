@@ -1,14 +1,14 @@
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use socketioxide::extract::{SocketRef, Data, AckSender};
-use socketioxide::SocketIo;
-use tracing::{info, warn};
-use crate::AppState;
 use crate::queries::create_message;
 use crate::responses::MessageResource;
 use crate::socket::connection::ConnectionInfo;
 use crate::socket::events::socket_publish_events;
+use crate::AppState;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use socketioxide::extract::{AckSender, Data, SocketRef};
+use socketioxide::SocketIo;
+use std::sync::Arc;
+use tracing::{info, warn};
 
 #[derive(Debug, Deserialize)]
 struct SendMessagePayload {
@@ -34,7 +34,12 @@ pub struct ReceiveChatMessagePayload {
 // }
 //
 
-pub async fn send_chat_message_handler(io: &SocketIo, socket: &SocketRef, Data(payload): Data<Value>, app_state: Arc<AppState>) {
+pub async fn send_chat_message_handler(
+    io: &SocketIo,
+    socket: &SocketRef,
+    Data(payload): Data<Value>,
+    app_state: Arc<AppState>,
+) {
     let connection_info = match socket.extensions.get::<ConnectionInfo>() {
         Some(info) => info,
         None => {
@@ -54,30 +59,37 @@ pub async fn send_chat_message_handler(io: &SocketIo, socket: &SocketRef, Data(p
 
     info!("Creating message from user {}: {:?}", user_id, payload);
 
-    let message = match create_message(
-        app_state,
-        user_id,
-        payload.channel_id,
-        payload.content,
-    ).await {
-        Ok(message) => message,
-        Err(e) => {
-            warn!("Failed to create message: {}", e);
-            return;
-        }
-    };
+    let message =
+        match create_message(app_state, user_id, payload.channel_id, payload.content).await {
+            Ok(message) => message,
+            Err(e) => {
+                warn!("Failed to create message: {}", e);
+                return;
+            }
+        };
 
     info!("Message saved: {:?}", message);
 
-    if let Err(e) = io.emit(socket_publish_events::RECEIVE_CHAT_MESSAGE, &ReceiveChatMessagePayload {
-        message: message.to_resource(connection_info.user.to_resource())
-    }).await {
+    if let Err(e) = io
+        .emit(
+            socket_publish_events::RECEIVE_CHAT_MESSAGE,
+            &ReceiveChatMessagePayload {
+                message: message.to_resource(connection_info.user.to_resource()),
+            },
+        )
+        .await
+    {
         warn!("Failed to emit message: {}", e);
     }
 }
 
-
-pub async fn send_poke_handler(io: &SocketIo, socket: &SocketRef, Data(payload): Data<Value>, ack: AckSender, app_state: Arc<AppState>) {
+pub async fn send_poke_handler(
+    io: &SocketIo,
+    socket: &SocketRef,
+    Data(payload): Data<Value>,
+    ack: AckSender,
+    app_state: Arc<AppState>,
+) {
     let connection_info = match socket.extensions.get::<ConnectionInfo>() {
         Some(info) => info,
         None => {
@@ -91,9 +103,9 @@ pub async fn send_poke_handler(io: &SocketIo, socket: &SocketRef, Data(payload):
         Some(id) => id,
         None => {
             let _ = ack.send(&json!({
-                        "success": false,
-                        "error": "No userId provided in payload"
-                    }));
+                "success": false,
+                "error": "No userId provided in payload"
+            }));
             return;
         }
     };
@@ -113,44 +125,56 @@ pub async fn send_poke_handler(io: &SocketIo, socket: &SocketRef, Data(payload):
     if let Some(connection) = app_state.connected_users.get(receiver_user_id) {
         // Prepare the payload
         let poke_payload = json!({
-                    "user": connection_info.user.to_resource(),
-                    "message": message,
-                    "createdAt": created_at
-                });
+            "user": connection_info.user.to_resource(),
+            "message": message,
+            "createdAt": created_at
+        });
 
         // Emit event to the specific receiver
-        connection.socket.emit(socket_publish_events::RECEIVE_POKE, &poke_payload).ok();
+        connection
+            .socket
+            .emit(socket_publish_events::RECEIVE_POKE, &poke_payload)
+            .ok();
 
         // Send success callback
         let _ = ack.send(&json!({ "success": true }));
     } else {
         // User not connected
         let _ = ack.send(&json!({
-                    "success": false,
-                    "error": format!("User with ID {} is currently not connected!", receiver_user_id)
-                }));
+            "success": false,
+            "error": format!("User with ID {} is currently not connected!", receiver_user_id)
+        }));
     }
 }
 
-
-pub async fn send_kick_handler(io: &SocketIo, socket: &SocketRef, Data(payload): Data<Value>, app_state: Arc<AppState>) {
-
+pub async fn send_kick_handler(
+    io: &SocketIo,
+    socket: &SocketRef,
+    Data(payload): Data<Value>,
+    app_state: Arc<AppState>,
+) {
 }
 
-
-pub async fn send_user_is_typing_handler(io: &SocketIo, socket: &SocketRef, Data(payload): Data<Value>, app_state: Arc<AppState>) {
-
+pub async fn send_user_is_typing_handler(
+    io: &SocketIo,
+    socket: &SocketRef,
+    Data(payload): Data<Value>,
+    app_state: Arc<AppState>,
+) {
 }
 
-
-pub async fn send_user_microphone_status_changed(io: &SocketIo, socket: &SocketRef, Data(payload): Data<Value>, app_state: Arc<AppState>) {
-
+pub async fn send_user_microphone_status_changed(
+    io: &SocketIo,
+    socket: &SocketRef,
+    Data(payload): Data<Value>,
+    app_state: Arc<AppState>,
+) {
 }
 
-
-pub async fn send_user_audio_mute_status_changed(io: &SocketIo, socket: &SocketRef, Data(payload): Data<Value>, app_state: Arc<AppState>) {
-
+pub async fn send_user_audio_mute_status_changed(
+    io: &SocketIo,
+    socket: &SocketRef,
+    Data(payload): Data<Value>,
+    app_state: Arc<AppState>,
+) {
 }
-
-
-

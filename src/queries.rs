@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use sqlx::Result;
-use uuid::Uuid;
-use crate::AppState;
 use crate::models::{Channel, Message, User};
+use crate::AppState;
+use sqlx::Result;
+use std::sync::Arc;
+use uuid::Uuid;
 
 pub async fn get_channels(data: Arc<AppState>) -> Result<Vec<Channel>> {
     return sqlx::query_as!(
@@ -15,8 +15,8 @@ pub async fn get_channels(data: Arc<AppState>) -> Result<Vec<Channel>> {
         ORDER BY sort_order ASC
         "#
     )
-        .fetch_all(&data.db)
-        .await
+    .fetch_all(&data.db)
+    .await;
 }
 
 pub async fn get_channel_messages(data: Arc<AppState>, channel_id: String) -> Result<Vec<Message>> {
@@ -38,8 +38,8 @@ pub async fn get_channel_messages(data: Arc<AppState>, channel_id: String) -> Re
         "#,
         channel_id
     )
-        .fetch_all(&data.db)
-        .await
+    .fetch_all(&data.db)
+    .await;
 }
 
 pub async fn get_user_by_id(data: Arc<AppState>, user_id: String) -> Result<User> {
@@ -53,15 +53,11 @@ pub async fn get_user_by_id(data: Arc<AppState>, user_id: String) -> Result<User
         "#,
         user_id
     )
-        .fetch_one(&data.db)
-        .await
+    .fetch_one(&data.db)
+    .await
 }
 
-
-pub async fn get_users(
-    data: Arc<AppState>,
-    user_ids: Option<&[String]>
-) -> Result<Vec<User>> {
+pub async fn get_users(data: Arc<AppState>, user_ids: Option<&[String]>) -> Result<Vec<User>> {
     if let Some(ids) = user_ids {
         if ids.is_empty() {
             // Early return: no users requested
@@ -70,10 +66,7 @@ pub async fn get_users(
 
         // Dynamically generate placeholders for `IN (?, ?, ?)`
         let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
-        let sql = format!(
-            "SELECT * FROM users WHERE id IN ({})",
-            placeholders
-        );
+        let sql = format!("SELECT * FROM users WHERE id IN ({})", placeholders);
 
         let mut query = sqlx::query_as::<_, User>(&sql);
 
@@ -89,11 +82,10 @@ pub async fn get_users(
             SELECT * FROM users
             "#
         )
-            .fetch_all(&data.db)
-            .await
+        .fetch_all(&data.db)
+        .await
     }
 }
-
 
 // pub async fn get_user_by_id(data: Arc<AppState>, user_id: String) -> Result<User> {
 //     return sqlx::query_as!(
@@ -114,7 +106,7 @@ pub async fn create_message(
     data: Arc<AppState>,
     user_id: String,
     channel_id: String,
-    content: Option<String>
+    content: Option<String>,
 ) -> Result<Message> {
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now();
@@ -131,8 +123,8 @@ pub async fn create_message(
         now,
         now,
     )
-        .execute(&data.db)
-        .await?;
+    .execute(&data.db)
+    .await?;
 
     let message = sqlx::query_as!(
         Message,
@@ -144,8 +136,8 @@ pub async fn create_message(
         "#,
         id
     )
-        .fetch_one(&data.db)
-        .await?;
+    .fetch_one(&data.db)
+    .await?;
 
     Ok(message)
 }

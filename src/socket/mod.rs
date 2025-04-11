@@ -1,4 +1,4 @@
 pub mod connection;
-pub mod listeners;
-pub mod handlers;
 mod events;
+pub mod handlers;
+pub mod listeners;

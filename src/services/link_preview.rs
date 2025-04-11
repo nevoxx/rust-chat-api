@@ -1,5 +1,5 @@
-use reqwest::Client;
 use reqwest::header::CONTENT_TYPE;
+use reqwest::Client;
 use select::document::Document;
 use select::predicate::{Attr, Name, Or, Predicate};
 use std::collections::HashMap;
@@ -15,8 +15,8 @@ pub struct UrlPreview {
 }
 
 pub async fn get_url_preview(input_url: &str) -> Result<UrlPreview, Box<dyn std::error::Error>> {
-    let parsed_url = Url::parse(input_url)
-        .map_err(|e| format!("Invalid URL '{}': {}", input_url, e))?;
+    let parsed_url =
+        Url::parse(input_url).map_err(|e| format!("Invalid URL '{}': {}", input_url, e))?;
 
     if parsed_url.scheme() != "http" && parsed_url.scheme() != "https" {
         return Err(format!("Unsupported URL scheme: {}", parsed_url.scheme()).into());

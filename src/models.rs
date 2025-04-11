@@ -23,7 +23,7 @@ impl Channel {
             createdAt: self.created_at.to_owned(),
             updatedAt: self.updated_at.to_owned(),
             deletedAt: self.deleted_at.to_owned(),
-        }
+        };
     }
 }
 
@@ -80,7 +80,7 @@ impl User {
             connectedAt: None,
             createdAt: self.created_at.to_owned(),
             updatedAt: self.updated_at.to_owned(),
-        }
+        };
     }
 
     pub fn to_auth_me_resource(&self) -> AuthMeUserResource {
@@ -96,6 +96,6 @@ impl User {
             createdAt: self.created_at.to_owned(),
             updatedAt: self.updated_at.to_owned(),
             permissions: vec![],
-        }
+        };
     }
 }

@@ -1,29 +1,33 @@
-mod socket;
-mod models;
-mod responses;
-mod queries;
-mod handlers;
-mod config;
-mod requests;
 mod auth;
+mod config;
+mod handlers;
+mod models;
+mod queries;
+mod requests;
+mod responses;
 mod services;
+mod socket;
 
-use std::sync::{Arc, Mutex};
-use axum::{routing::get, routing::post, Router, middleware};
+use crate::auth::auth;
+use crate::config::Config;
+use crate::handlers::{
+    get_auth_me_handler, get_channel_messages_handler, get_channels_handler,
+    get_link_preview_handler, get_server_info, get_users_handler, hello_handler,
+    post_auth_token_handler, post_register_user_handler,
+};
+use crate::models::User;
+use crate::socket::connection::on_connect;
+use axum::{middleware, routing::get, routing::post, Router};
 use dotenv::dotenv;
 use serde_json::Value;
 use socketioxide::extract::{Data, SocketRef};
 use socketioxide::SocketIo;
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySqlPool;
+use std::sync::{Arc, Mutex};
+use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
 use tracing_subscriber::FmtSubscriber;
-use tower_http::cors::{CorsLayer, Any};
-use crate::auth::auth;
-use crate::config::Config;
-use crate::handlers::{get_auth_me_handler, get_channel_messages_handler, get_channels_handler, get_link_preview_handler, get_server_info, get_users_handler, hello_handler, post_auth_token_handler, post_register_user_handler};
-use crate::models::User;
-use crate::socket::connection::on_connect;
 
 #[derive(Debug)]
 pub struct UserConnection {
@@ -41,7 +45,6 @@ pub struct AppState {
     cnt: Mutex<i32>,
     connected_users: dashmap::DashMap<String, UserConnection>,
 }
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -77,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // .allow_headers(Any)
         .allow_headers([
             axum::http::header::AUTHORIZATION,
-            axum::http::header::CONTENT_TYPE
+            axum::http::header::CONTENT_TYPE,
         ]);
 
     // App State
@@ -89,9 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Socket.io Server
-    let (socket_layer, io) = SocketIo::builder()
-        .req_path("/server/")
-        .build_layer();
+    let (socket_layer, io) = SocketIo::builder().req_path("/server/").build_layer();
 
     // Create a closure that captures the app state
     let state_clone = app_state.clone();
@@ -108,27 +109,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Router::new()
                 .route("/serverinfo", get(get_server_info))
                 .route("/channels", get(get_channels_handler))
-                .route("/channels/{channel_id}/messages/", get(get_channel_messages_handler))
+                .route(
+                    "/channels/{channel_id}/messages/",
+                    get(get_channel_messages_handler),
+                )
                 .route("/users", get(get_users_handler))
                 .route("/auth/me", get(get_auth_me_handler))
                 .route("/fetch-preview-data/", get(get_link_preview_handler))
-                .layer(middleware::from_fn_with_state(app_state.clone(), auth))
+                .layer(middleware::from_fn_with_state(app_state.clone(), auth)),
         )
         .with_state(app_state)
         .layer(socket_layer)
         .layer(cors_layer);
 
     // Create Listener
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
     info!("🚀 Server started successfully: http://localhost:3000");
 
     // Run Axum Webserver
-    axum::serve(listener, app)
-        .await
-        .unwrap();
+    axum::serve(listener, app).await.unwrap();
 
     // Exit gracefully
     return Ok(());

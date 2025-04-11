@@ -1,7 +1,9 @@
 use crate::auth::TokenClaims;
 use crate::models::User;
 use crate::requests::{LoginRequest, RegisterRequest};
-use crate::responses::{ChannelResource, ConnectionStateResource, ServerInfoResource, UserListResource};
+use crate::responses::{
+    ChannelResource, ConnectionStateResource, ServerInfoResource, UserListResource,
+};
 use crate::{queries, AppState};
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::SaltString;
@@ -21,15 +23,16 @@ pub async fn hello_handler() -> impl IntoResponse {
 }
 
 pub async fn get_server_info(
-    State(data): State<Arc<AppState>>
+    State(data): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    let channels = queries::get_channels(data)
-        .await
-        .map_err(|e|
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({
+    let channels = queries::get_channels(data).await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
                 "message": format!("Error: {}", e),
-            })))
-        )?;
+            })),
+        )
+    })?;
 
     let channels = channels
         .iter()
@@ -45,20 +48,20 @@ pub async fn get_server_info(
         channels,
     };
 
-    return Ok((StatusCode::OK, Json(json!(response))))
+    return Ok((StatusCode::OK, Json(json!(response))));
 }
 
-
 pub async fn get_channels_handler(
-    State(data): State<Arc<AppState>>
+    State(data): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    let channels = queries::get_channels(data)
-        .await
-        .map_err(|e|
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({
+    let channels = queries::get_channels(data).await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
                 "message": format!("Error: {}", e),
-            })))
-        )?;
+            })),
+        )
+    })?;
 
     let channel_resources = channels
         .iter()
@@ -74,11 +77,14 @@ pub async fn get_channel_messages_handler(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let messages = queries::get_channel_messages(data.clone(), channel_id)
         .await
-        .map_err(|e|
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({
-                "message": format!("Error: {}", e),
-            })))
-        )?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "message": format!("Error: {}", e),
+                })),
+            )
+        })?;
 
     // Collect unique user IDs from messages
 
@@ -87,32 +93,27 @@ pub async fn get_channel_messages_handler(
         .map(|message| message.user_id.clone())
         .collect();
 
-    let unique_user_ids_vec: Vec<String> = unique_user_ids
-        .into_iter()
-        .collect();
+    let unique_user_ids_vec: Vec<String> = unique_user_ids.into_iter().collect();
 
     // Fetch only the needed users
 
     let users = queries::get_users(data.clone(), Some(&unique_user_ids_vec))
         .await
-        .map_err(|e| (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "message": format!("Failed to fetch users: {}", e) })),
-        ))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "message": format!("Failed to fetch users: {}", e) })),
+            )
+        })?;
 
     // Build a lookup map for users
-    let user_map: HashMap<String, User> = users
-        .into_iter()
-        .map(|u| (u.id.clone(), u))
-        .collect();
+    let user_map: HashMap<String, User> = users.into_iter().map(|u| (u.id.clone(), u)).collect();
 
     // Build message resources
     let message_resources = messages
         .into_iter()
         .map(|msg| {
-            let user = user_map
-                .get(&msg.user_id)
-                .map(|u| u.to_resource());
+            let user = user_map.get(&msg.user_id).map(|u| u.to_resource());
 
             return msg.to_resource(user.unwrap());
         })
@@ -131,22 +132,22 @@ pub async fn post_auth_token_handler(
         "SELECT * FROM users WHERE username = ?",
         body.username
     )
-        .fetch_optional(&data.db)
-        .await
-        .map_err(|e| {
-            let error_response = json!({
+    .fetch_optional(&data.db)
+    .await
+    .map_err(|e| {
+        let error_response = json!({
             "status": "error",
             "message": format!("Database error: {}", e),
         });
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-        })?
-        .ok_or_else(|| {
-            let error_response = json!({
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+    })?
+    .ok_or_else(|| {
+        let error_response = json!({
             "status": "fail",
             "message": "Invalid username or password1",
         });
-            (StatusCode::BAD_REQUEST, Json(error_response))
-        })?;
+        (StatusCode::BAD_REQUEST, Json(error_response))
+    })?;
 
     let is_valid = match PasswordHash::new(&user.password) {
         Ok(parsed_hash) => Argon2::default()
@@ -177,11 +178,13 @@ pub async fn post_auth_token_handler(
         &claims,
         &EncodingKey::from_secret(data.config.jwt_secret.as_ref()),
     )
-        .unwrap();
+    .unwrap();
 
-    Ok((StatusCode::OK, Json(json!({"accessToken": token, "refreshToken": ""}))))
+    Ok((
+        StatusCode::OK,
+        Json(json!({"accessToken": token, "refreshToken": ""})),
+    ))
 }
-
 
 pub async fn get_auth_me_handler(
     Extension(user): Extension<User>,
@@ -238,32 +241,32 @@ pub async fn post_register_user_handler(
         body.username.to_string(),
         hashed_password
     )
-        .fetch_one(&data.db)
-        .await
-        .map_err(|e| {
-            let error_response = serde_json::json!({
+    .fetch_one(&data.db)
+    .await
+    .map_err(|e| {
+        let error_response = serde_json::json!({
             "status": "fail",
             "message": format!("Database error: {}", e),
         });
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-        })?;
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+    })?;
 
     let user_response = serde_json::json!({"status": "success"});
 
     Ok(Json(user_response))
 }
 
-
 pub async fn get_users_handler(
-    State(data): State<Arc<AppState>>
+    State(data): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    let users = queries::get_users(data.clone(), None)
-        .await
-        .map_err(|e|
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({
+    let users = queries::get_users(data.clone(), None).await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
                 "message": format!("Error: {}", e),
-            })))
-        )?;
+            })),
+        )
+    })?;
 
     let user_resources = users
         .iter()
@@ -283,7 +286,7 @@ pub async fn get_users_handler(
                     currentChannelId: None,
                     isAudioMuted: None,
                     isMicrophoneMuted: None,
-                }
+                },
             };
 
             UserListResource {
@@ -296,9 +299,8 @@ pub async fn get_users_handler(
     Ok((StatusCode::OK, Json(json!(user_resources))))
 }
 
-
 pub async fn get_link_preview_handler(
-    State(data): State<Arc<AppState>>
+    State(data): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     return Ok(());
 }

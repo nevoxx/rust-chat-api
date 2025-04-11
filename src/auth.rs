@@ -1,14 +1,14 @@
-use std::sync::Arc;
+use crate::models::User;
+use crate::AppState;
 use axum::body::Body;
 use axum::extract::{Request, State};
 use axum::http::{header, StatusCode};
-use axum::Json;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
+use axum::Json;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
-use crate::AppState;
-use crate::models::User;
+use std::sync::Arc;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenClaims {
@@ -29,13 +29,12 @@ pub fn parse_token(token: &str, jwt_secret: &str) -> Result<TokenClaims, String>
         &DecodingKey::from_secret(jwt_secret.as_ref()),
         &Validation::default(),
     )
-        .map(|token| token.claims)
-        .map_err(|e| format!("Invalid token: {}", e))
+    .map(|token| token.claims)
+    .map_err(|e| format!("Invalid token: {}", e))
 }
 
 pub fn extract_user_id(token_claims: &TokenClaims) -> Result<uuid::Uuid, String> {
-    uuid::Uuid::parse_str(&token_claims.sub)
-        .map_err(|e| format!("Invalid User ID in token: {}", e))
+    uuid::Uuid::parse_str(&token_claims.sub).map_err(|e| format!("Invalid User ID in token: {}", e))
 }
 
 pub async fn auth(
@@ -43,7 +42,8 @@ pub async fn auth(
     mut request: Request<Body>,
     next: Next,
 ) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
-    let token = request.headers()
+    let token = request
+        .headers()
         .get(header::AUTHORIZATION)
         .and_then(|auth_header| auth_header.to_str().ok())
         .and_then(|auth_value| {
@@ -66,14 +66,14 @@ pub async fn auth(
         &DecodingKey::from_secret(data.config.jwt_secret.as_ref()),
         &Validation::default(),
     )
-        .map_err(|_| {
-            let json_error = ErrorResponse {
-                status: "fail",
-                message: "Invalid token".to_string(),
-            };
-            (StatusCode::UNAUTHORIZED, Json(json_error))
-        })?
-        .claims;
+    .map_err(|_| {
+        let json_error = ErrorResponse {
+            status: "fail",
+            message: "Invalid token".to_string(),
+        };
+        (StatusCode::UNAUTHORIZED, Json(json_error))
+    })?
+    .claims;
 
     let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| {
         let json_error = ErrorResponse {
@@ -83,7 +83,11 @@ pub async fn auth(
         (StatusCode::UNAUTHORIZED, Json(json_error))
     })?;
 
-    let query = sqlx::query_as!(User, "SELECT * FROM users WHERE id = ?", user_id.to_string());
+    let query = sqlx::query_as!(
+        User,
+        "SELECT * FROM users WHERE id = ?",
+        user_id.to_string()
+    );
 
     let user = match query.fetch_optional(&data.db).await {
         Ok(user) => user,
