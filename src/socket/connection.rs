@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use serde::Serialize;
 use serde_json::Value;
-use socketioxide::extract::{SocketRef, Data};
+use socketioxide::extract::{SocketRef, Data, AckSender};
 use socketioxide::SocketIo;
 use tracing::{info, warn};
 use uuid::Uuid;
@@ -79,32 +79,32 @@ async fn authenticate_socket(socket: &SocketRef, token: &str, app_state: Arc<App
 
 fn register_event_handlers(socket: &SocketRef, app_state: Arc<AppState>) {
     let app_state_clone = app_state.clone();
-    socket.on(socket_listen_events::SEND_CHAT_MESSAGE, |io: SocketIo, socket: SocketRef, Data(msg): Data<Value>| async move {
-        send_chat_message_handler(&io, &socket, Data(msg), app_state_clone).await;
+    socket.on(socket_listen_events::SEND_CHAT_MESSAGE, |io: SocketIo, socket: SocketRef, Data(payload): Data<Value>| async move {
+        send_chat_message_handler(&io, &socket, Data(payload), app_state_clone).await;
     });
 
     let app_state_clone = app_state.clone();
-    socket.on(socket_listen_events::SEND_POKE, |io: SocketIo, socket: SocketRef, Data(msg): Data<Value>| async move {
-        send_poke_handler(&io, &socket, Data(msg), app_state_clone).await;
+    socket.on(socket_listen_events::SEND_POKE, |io: SocketIo, socket: SocketRef, Data(payload): Data<Value>, ack: AckSender| async move {
+        send_poke_handler(&io, &socket, Data(payload), ack, app_state_clone).await;
     });
 
     let app_state_clone = app_state.clone();
-    socket.on(socket_listen_events::SEND_KICK, |io: SocketIo, socket: SocketRef, Data(msg): Data<Value>| async move {
-        send_kick_handler(&io, &socket, Data(msg), app_state_clone).await;
+    socket.on(socket_listen_events::SEND_KICK, |io: SocketIo, socket: SocketRef, Data(payload): Data<Value>| async move {
+        send_kick_handler(&io, &socket, Data(payload), app_state_clone).await;
     });
 
     let app_state_clone = app_state.clone();
-    socket.on(socket_listen_events::SEND_USER_IS_TYPING, |io: SocketIo, socket: SocketRef, Data(msg): Data<Value>| async move {
-        send_user_is_typing_handler(&io, &socket, Data(msg), app_state_clone).await;
+    socket.on(socket_listen_events::SEND_USER_IS_TYPING, |io: SocketIo, socket: SocketRef, Data(payload): Data<Value>| async move {
+        send_user_is_typing_handler(&io, &socket, Data(payload), app_state_clone).await;
     });
 
     let app_state_clone = app_state.clone();
-    socket.on(socket_listen_events::SEND_USER_MICROPHONE_STATUS_CHANGED, |io: SocketIo, socket: SocketRef, Data(msg): Data<Value>| async move {
-        send_user_microphone_status_changed(&io, &socket, Data(msg), app_state_clone).await;
+    socket.on(socket_listen_events::SEND_USER_MICROPHONE_STATUS_CHANGED, |io: SocketIo, socket: SocketRef, Data(payload): Data<Value>| async move {
+        send_user_microphone_status_changed(&io, &socket, Data(payload), app_state_clone).await;
     });
 
     let app_state_clone = app_state.clone();
-    socket.on(socket_listen_events::SEND_USER_AUDIO_MUTE_STATUS_CHANGED, |io: SocketIo, socket: SocketRef, Data(msg): Data<Value>| async move {
-        send_user_audio_mute_status_changed(&io, &socket, Data(msg), app_state_clone).await;
+    socket.on(socket_listen_events::SEND_USER_AUDIO_MUTE_STATUS_CHANGED, |io: SocketIo, socket: SocketRef, Data(payload): Data<Value>| async move {
+        send_user_audio_mute_status_changed(&io, &socket, Data(payload), app_state_clone).await;
     });
 }
