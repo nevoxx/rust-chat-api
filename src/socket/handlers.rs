@@ -34,7 +34,7 @@ pub struct ReceiveChatMessagePayload {
 // }
 //
 
-pub async fn send_chat_message(io: &SocketIo, socket: &SocketRef, Data(msg): Data<Value>, app_state: Arc<AppState>) {
+pub async fn send_chat_message_handler(io: &SocketIo, socket: &SocketRef, Data(msg): Data<Value>, app_state: Arc<AppState>) {
     let connection_info = match socket.extensions.get::<ConnectionInfo>() {
         Some(info) => info,
         None => {
@@ -75,3 +75,31 @@ pub async fn send_chat_message(io: &SocketIo, socket: &SocketRef, Data(msg): Dat
         warn!("Failed to emit message: {}", e);
     }
 }
+
+
+pub async fn send_poke_handler(io: &SocketIo, socket: &SocketRef, Data(msg): Data<Value>, app_state: Arc<AppState>) {
+
+}
+
+
+pub async fn send_kick_handler(io: &SocketIo, socket: &SocketRef, Data(msg): Data<Value>, app_state: Arc<AppState>) {
+
+}
+
+
+pub async fn send_user_is_typing_handler(io: &SocketIo, socket: &SocketRef, Data(msg): Data<Value>, app_state: Arc<AppState>) {
+
+}
+
+
+pub async fn send_user_microphone_status_changed(io: &SocketIo, socket: &SocketRef, Data(msg): Data<Value>, app_state: Arc<AppState>) {
+
+}
+
+
+pub async fn send_user_audio_mute_status_changed(io: &SocketIo, socket: &SocketRef, Data(msg): Data<Value>, app_state: Arc<AppState>) {
+
+}
+
+
+
