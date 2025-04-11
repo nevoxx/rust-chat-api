@@ -14,7 +14,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-
+use tracing::info;
 
 pub async fn hello_handler() -> impl IntoResponse {
     "Hello, Rust! V2!"
@@ -257,7 +257,7 @@ pub async fn post_register_user_handler(
 pub async fn get_users_handler(
     State(data): State<Arc<AppState>>
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    let users = queries::get_users(data, None)
+    let users = queries::get_users(data.clone(), None)
         .await
         .map_err(|e|
             (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({
@@ -267,16 +267,33 @@ pub async fn get_users_handler(
 
     let user_resources = users
         .iter()
-        .map(|user| UserListResource { user: user.to_resource(), connectionState: ConnectionStateResource {
-            isOnline: false,
-            connectedAt: None,
-            currentChannelId: None,
-            isAudioMuted: None,
-            isMicrophoneMuted: None,
-        } })
+        .map(|user| {
+            let user_resource = user.to_resource();
+            let connection_state = match data.connected_users.get(&user.id) {
+                Some(connection) => ConnectionStateResource {
+                    isOnline: true,
+                    connectedAt: Some(connection.connected_at),
+                    currentChannelId: connection.current_channel_id.clone(),
+                    isAudioMuted: Some(connection.is_audio_muted),
+                    isMicrophoneMuted: Some(connection.is_mic_muted),
+                },
+                None => ConnectionStateResource {
+                    isOnline: false,
+                    connectedAt: None,
+                    currentChannelId: None,
+                    isAudioMuted: None,
+                    isMicrophoneMuted: None,
+                }
+            };
+
+            UserListResource {
+                user: user_resource,
+                connectionState: connection_state,
+            }
+        })
         .collect::<Vec<UserListResource>>();
 
-    return Ok((StatusCode::OK, Json(json!(user_resources))));
+    Ok((StatusCode::OK, Json(json!(user_resources))))
 }
 
 

@@ -8,6 +8,7 @@ use crate::AppState;
 use crate::queries::create_message;
 use crate::responses::MessageResource;
 use crate::socket::connection::ConnectionInfo;
+use crate::socket::events::socket_publish_events;
 
 #[derive(Debug, Deserialize)]
 struct SendMessagePayload {
@@ -68,7 +69,7 @@ pub async fn send_chat_message(io: &SocketIo, socket: &SocketRef, Data(msg): Dat
 
     info!("Message saved: {:?}", message);
 
-    if let Err(e) = io.emit("receiveChatMessage", &ReceiveChatMessagePayload {
+    if let Err(e) = io.emit(socket_publish_events::RECEIVE_CHAT_MESSAGE, &ReceiveChatMessagePayload {
         message: message.to_resource(connection_info.user.to_resource())
     }).await {
         warn!("Failed to emit message: {}", e);

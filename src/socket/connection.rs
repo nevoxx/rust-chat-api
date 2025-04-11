@@ -5,10 +5,11 @@ use socketioxide::extract::{SocketRef, Data};
 use socketioxide::SocketIo;
 use tracing::{info, warn};
 use uuid::Uuid;
-use crate::AppState;
+use crate::{AppState, UserConnection};
 use crate::auth::{extract_user_id, parse_token};
 use crate::models::User;
 use crate::queries::get_user_by_id;
+use crate::socket::events::socket_listen_events;
 use crate::socket::handlers::send_chat_message;
 
 #[derive(Debug, Clone, Serialize)]
@@ -55,13 +56,22 @@ async fn authenticate_socket(socket: &SocketRef, token: &str, app_state: Arc<App
         .map_err(|e| format!("Failed to extract user ID: {}", e))?;
 
     // Fetch user from database
-    let user = get_user_by_id(app_state, user_id.to_string()).await
+    let user = get_user_by_id(app_state.clone(), user_id.to_string()).await
         .map_err(|e| format!("Failed to fetch user: {}", e))?;
 
     // Store connection info
     socket.extensions.insert(ConnectionInfo {
         token: token.to_string(),
-        user,
+        user: user.clone(),
+    });
+
+    app_state.connected_users.insert(user.id.clone(), UserConnection {
+        user: user.clone(),
+        socket: socket.clone(),
+        current_channel_id: None,
+        connected_at: chrono::Utc::now(),
+        is_audio_muted: false,
+        is_mic_muted: false,
     });
 
     Ok(())
@@ -69,7 +79,7 @@ async fn authenticate_socket(socket: &SocketRef, token: &str, app_state: Arc<App
 
 fn register_event_handlers(socket: &SocketRef, app_state: Arc<AppState>) {
     let app_state_clone = app_state.clone();
-    socket.on("sendChatMessage", |io: SocketIo, socket: SocketRef, Data(msg): Data<Value>| async move {
+    socket.on(socket_listen_events::SEND_CHAT_MESSAGE, |io: SocketIo, socket: SocketRef, Data(msg): Data<Value>| async move {
         send_chat_message(&io, &socket, Data(msg), app_state_clone).await;
     });
 }

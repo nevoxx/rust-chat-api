@@ -22,13 +22,24 @@ use tower_http::cors::{CorsLayer, Any};
 use crate::auth::auth;
 use crate::config::Config;
 use crate::handlers::{get_auth_me_handler, get_channel_messages_handler, get_channels_handler, get_link_preview_handler, get_server_info, get_users_handler, hello_handler, post_auth_token_handler, post_register_user_handler};
+use crate::models::User;
 use crate::socket::connection::on_connect;
 
+#[derive(Debug)]
+pub struct UserConnection {
+    pub user: User,
+    pub socket: SocketRef,
+    pub current_channel_id: Option<String>,
+    pub connected_at: chrono::DateTime<chrono::Utc>,
+    pub is_audio_muted: bool,
+    pub is_mic_muted: bool,
+}
 
 pub struct AppState {
     db: MySqlPool,
     config: Config,
     cnt: Mutex<i32>,
+    connected_users: dashmap::DashMap<String, UserConnection>,
 }
 
 
@@ -70,7 +81,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ]);
 
     // App State
-    let app_state = Arc::new(AppState { db: pool.clone(), config: config.clone(), cnt: Mutex::from(0) });
+    let app_state = Arc::new(AppState {
+        db: pool.clone(),
+        config: config.clone(),
+        cnt: Mutex::from(0),
+        connected_users: dashmap::DashMap::new(),
+    });
 
     // Socket.io Server
     let (socket_layer, io) = SocketIo::builder()
