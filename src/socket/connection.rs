@@ -111,8 +111,8 @@ fn register_event_handlers(socket: &SocketRef, app_state: Arc<AppState>) {
     let app_state_clone = app_state.clone();
     socket.on(
         socket_listen_events::SEND_KICK,
-        |io: SocketIo, socket: SocketRef, Data(payload): Data<Value>| async move {
-            send_kick_handler(&io, &socket, Data(payload), app_state_clone).await;
+        |io: SocketIo, socket: SocketRef, Data(payload): Data<Value>, ack: AckSender| async move {
+            send_kick_handler(&io, &socket, Data(payload), ack, app_state_clone).await;
         },
     );
 

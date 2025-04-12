@@ -151,8 +151,67 @@ pub async fn send_kick_handler(
     io: &SocketIo,
     socket: &SocketRef,
     Data(payload): Data<Value>,
+    ack: AckSender,
     app_state: Arc<AppState>,
 ) {
+    let connection_info = match socket.extensions.get::<ConnectionInfo>() {
+        Some(info) => info,
+        None => {
+            warn!("Received message but no connection info found");
+            return;
+        }
+    };
+
+    // Extract receiver user ID from payload
+    let receiver_user_id = match payload.get("userId").and_then(|id| id.as_str()) {
+        Some(id) => id,
+        None => {
+            let _ = ack.send(&json!({
+                "success": false,
+                "error": "No userId provided in payload"
+            }));
+            return;
+        }
+    };
+
+    let reason = payload.get("reason").and_then(|m| m.as_str()).unwrap_or("");
+
+    let created_at = payload
+        .get("createdAt")
+        .and_then(|dt| dt.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+
+    // Check if receiver exists and is connected
+    if let Some(connection) = app_state.connected_users.get(receiver_user_id) {
+        // Prepare the payload
+        let kick_payload = json!({
+            "user": connection_info.user.to_resource(),
+            "reason": reason,
+            "createdAt": created_at
+        });
+
+        // Emit event to the specific receiver
+        connection
+            .socket
+            .emit(socket_publish_events::RECEIVE_KICK, &kick_payload)
+            .ok();
+
+        // todo: kill livekit connections
+
+        // Disconnect socket
+        // todo: maybe handle error case?
+        let _ = connection.socket.clone().disconnect();
+
+        // Send success callback
+        let _ = ack.send(&json!({ "success": true }));
+    } else {
+        // User not connected
+        let _ = ack.send(&json!({
+            "success": false,
+            "error": format!("User with ID {} is currently not connected!", receiver_user_id)
+        }));
+    }
 }
 
 pub async fn send_user_is_typing_handler(
