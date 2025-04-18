@@ -2,10 +2,11 @@ use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
 use select::document::Document;
 use select::predicate::{Attr, Name, Or, Predicate};
+use serde::Serialize;
 use std::collections::HashMap;
 use url::Url;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct UrlPreview {
     pub title: Option<String>,
     pub description: Option<String>,

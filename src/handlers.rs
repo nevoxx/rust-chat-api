@@ -4,16 +4,19 @@ use crate::requests::{LoginRequest, RegisterRequest};
 use crate::responses::{
     ChannelResource, ConnectionStateResource, ServerInfoResource, UserListResource,
 };
+use crate::services::link_preview::get_url_preview;
 use crate::{queries, AppState};
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use jsonwebtoken::{encode, EncodingKey, Header};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
+use url::Url;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tracing::info;
@@ -299,8 +302,43 @@ pub async fn get_users_handler(
     Ok((StatusCode::OK, Json(json!(user_resources))))
 }
 
+
+#[derive(Debug, Deserialize)]
+pub struct LinkPreviewQueryParams {
+    url: Option<String>,
+}
+
 pub async fn get_link_preview_handler(
     State(data): State<Arc<AppState>>,
+    Query(params): Query<LinkPreviewQueryParams>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    return Ok(());
+    // Check if url param is provided
+    let Some(mut url) = params.url else {
+        return Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(json!({ "error": "Missing 'url' query parameter."})),
+        ));
+    };
+
+    // Clean markdown style URLs [text](url)
+    if let Some(idx) = url.find("](") {
+        url = url.split_at(idx).0.to_string();
+    }
+
+    // Validate URL format
+    if Url::parse(&url).is_err() {
+        return Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(json!({ "error": "Malformed url"})),
+        )); 
+    }
+
+    // Step 4: Call preview service
+    match get_url_preview(&url).await {
+        Ok(preview) => Ok((StatusCode::OK, Json(json!(preview)))),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )),
+    }
 }

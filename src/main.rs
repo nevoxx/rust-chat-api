@@ -17,6 +17,8 @@ use crate::handlers::{
 };
 use crate::models::User;
 use crate::socket::connection::on_connect;
+use argon2::{Argon2, PasswordHasher};
+use argon2::password_hash::{SaltString, PasswordHash, rand_core::OsRng};
 use axum::{middleware, routing::get, routing::post, Router};
 use dotenv::dotenv;
 use serde_json::Value;
@@ -72,6 +74,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::process::exit(1);
         }
     };
+
+
+
+
+
+
+    // The password to hash
+    let password = "123456";
+
+    // Generate a random salt
+    let salt = SaltString::generate(&mut OsRng);
+
+    // Create Argon2 hasher
+    let argon2 = Argon2::default();
+
+    // Hash the password
+    let password_hash = argon2.hash_password(password.as_bytes(), &salt)
+        .expect("failed to hash password")
+        .to_string();
+
+    // Print the resulting hash
+    println!("Argon2 hash: {}", password_hash);
+
+
+
 
     // CORS
     let cors_layer = CorsLayer::new()
